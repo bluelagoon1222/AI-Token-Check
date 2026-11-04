@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI TOKEN CHECK — 글로벌 AI 토큰 수요 데스크</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --ink:#1A2230; --sub:#5B6676; --faint:#8A94A3; --line:#E4E7EC; --bg:#FFFFFF; --panel:#F6F7F9;
+  --orange:#F58220; --navy:#043B72; --teal:#0F7C8C; --red:#C62828; --amber:#A86A00; --green:#2E6B3A;
+  --red-bg:#FDECEC; --amber-bg:#FFF4DC; --green-bg:#EAF4EC;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic","돋움",Dotum,sans-serif;
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--navy)}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--line)}
+.head{display:flex;align-items:center;gap:16px;padding:18px 0 14px}
+.home{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid var(--line);
+  border-radius:10px;text-decoration:none;font-size:18px;flex:none}
+.home:focus-visible,.tab:focus-visible,.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.brand h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--navy)}
+.brand h1 b{color:var(--orange);font-weight:800}
+.brand p{margin:2px 0 0;color:var(--sub);font-size:13px}
+.asof{margin-left:auto;text-align:right;color:var(--sub);font-size:12.5px;line-height:1.5}
+.asof strong{color:var(--ink);font-weight:700}
+
+/* signal band — the one bold element */
+.signal{border-radius:16px;margin:18px 0 6px;padding:20px 24px;display:grid;grid-template-columns:auto 1fr;gap:6px 28px;align-items:center}
+.signal.green{background:var(--green-bg)} .signal.yellow{background:var(--amber-bg)} .signal.red{background:var(--red-bg)} .signal.wait{background:var(--panel)}
+.signal .lamp{display:flex;gap:8px;grid-row:span 2}
+.signal .lamp i{width:22px;height:22px;border-radius:50%;background:#D6DAE0;display:block}
+.signal.green .lamp i:nth-child(3){background:var(--green)}
+.signal.yellow .lamp i:nth-child(2){background:#E5A100}
+.signal.red .lamp i:nth-child(1){background:var(--red)}
+.signal .word{font-size:30px;font-weight:800;letter-spacing:-.03em}
+.signal.red .word{color:var(--red)} .signal.yellow .word{color:var(--amber)} .signal.green .word{color:var(--green)}
+.signal .lines{color:var(--ink);font-size:14px}
+.signal .lines div{margin:2px 0}
+
+nav.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin-top:18px;scrollbar-width:none}
+.tab{appearance:none;border:0;background:none;font:inherit;font-weight:600;color:var(--sub);padding:12px 14px;
+  border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--navy);border-bottom-color:var(--orange)}
+section.pane{display:none;padding:22px 0 40px}
+section.pane.on{display:block}
+h2{font-size:19px;margin:0 0 4px;letter-spacing:-.02em}
+h3{font-size:16px;margin:26px 0 8px;letter-spacing:-.01em}
+.lead{color:var(--sub);margin:0 0 16px;font-size:14px;max-width:78ch}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.kpi{padding:14px 16px;border-right:1px solid var(--line)}
+.kpi:last-child{border-right:0}
+.kpi .k{font-size:12.5px;color:var(--sub)}
+.kpi .v{font-size:24px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi .s{font-size:12.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:22px;margin-top:22px}
+.box{border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.chart{position:relative;height:320px}
+.chart.sm{height:240px}
+ul.sum{margin:0;padding-left:18px} ul.sum li{margin:5px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+th{color:var(--sub);font-weight:600;background:var(--panel);position:sticky;top:0}
+td.l,th.l{text-align:left}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;max-height:560px}
+.neg{color:var(--red)} .pos{color:var(--navy)}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:6px}
+.tag.CN{background:#FDECEC;color:var(--red)} .tag.US{background:#E7EEF7;color:var(--navy)} .tag.ETC{background:var(--panel);color:var(--sub)}
+.lbl{font-size:11.5px;color:var(--faint);margin-left:4px;white-space:nowrap}
+.alert{border-left:5px solid var(--faint);background:var(--panel);border-radius:8px;padding:10px 14px;margin:8px 0}
+.alert.red{border-left-color:var(--red);background:var(--red-bg)}
+.alert.yellow{border-left-color:#E5A100;background:var(--amber-bg)}
+.alert .t{font-weight:700}
+.alert .d{font-size:13.5px;color:var(--sub);margin-top:2px}
+.note{font-size:12.5px;color:var(--faint);margin-top:10px;max-width:90ch}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--sub)}
+.chip[aria-pressed="true"]{border-color:var(--navy);color:var(--navy);font-weight:700}
+.sites{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.site{border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column}
+.site h4{margin:0;font-size:16px}
+.site .src{font-size:12.5px;color:var(--faint)}
+.site ul{margin:8px 0 12px;padding-left:18px;font-size:13.5px;color:var(--ink)}
+.site .sig{font-size:13px;color:var(--sub);margin-bottom:12px}
+.site .acts{margin-top:auto;display:flex;gap:8px;align-items:center}
+.btn{display:inline-block;background:var(--navy);color:#fff;text-decoration:none;font-weight:700;font-size:13.5px;padding:8px 14px;border-radius:8px}
+.btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line);font-weight:600}
+.empty{padding:26px;border:1px dashed var(--line);border-radius:12px;color:var(--sub);text-align:center}
+footer{border-top:1px solid var(--line);color:var(--faint);font-size:12px;padding:18px 0 30px}
+@media (max-width:900px){
+  .grid2{grid-template-columns:1fr} .kpis{grid-template-columns:repeat(2,1fr)}
+  .kpi:nth-child(2){border-right:0} .kpi:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .sites{grid-template-columns:1fr} .asof{display:none}
+  .signal{grid-template-columns:1fr} .signal .lamp{grid-row:auto}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+ <div class="wrap head">
+  <a class="home" href="https://bluelagoon1222.github.io/" title="SJ Market Desk 홈" aria-label="SJ Market Desk 홈">🏠</a>
+  <div class="brand">
+   <h1>AI TOKEN <b>CHECK</b></h1>
+   <p>글로벌 AI 토큰 수요로 읽는 한·일 데이터센터 공급망 — 매일 07시 갱신</p>
+  </div>
+  <div class="asof" id="asof">데이터 불러오는 중</div>
+ </div>
+</header>
+
+<main class="wrap">
+ <div class="signal wait" id="signal">
+  <div class="lamp" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="word" id="sigWord">대기</div>
+  <div class="lines" id="sigLines">첫 데이터 수집 전입니다. GitHub Actions에서 daily-update를 한 번 실행하면 표시됩니다.</div>
+ </div>
+
+ <nav class="tabs" role="tablist" aria-label="화면 선택">
+  <button class="tab" role="tab" data-p="today" aria-selected="true">오늘</button>
+  <button class="tab" role="tab" data-p="alerts">이벤트 경보</button>
+  <button class="tab" role="tab" data-p="tokens">토큰 사용량</button>
+  <button class="tab" role="tab" data-p="share">점유율</button>
+  <button class="tab" role="tab" data-p="price">단가</button>
+  <button class="tab" role="tab" data-p="corr">코스피 연동</button>
+  <button class="tab" role="tab" data-p="stocks">한·일 종목</button>
+  <button class="tab" role="tab" data-p="sites">원문 사이트(한국어)</button>
+ </nav>
+
+ <!-- 오늘 -->
+ <section class="pane on" id="p-today">
+  <div class="kpis" id="kpis"></div>
+  <div class="grid2">
+   <div class="box">
+    <h3 style="margin-top:0">토큰 사용량(7일 평균)과 코스피</h3>
+    <div class="chart"><canvas id="cToday"></canvas></div>
+    <div class="note">세로 점선 = 과거 이벤트(딥시크·키미 K3·가격 인하 등). 주황 = 토큰, 남색 = 코스피.</div>
+   </div>
+   <div class="box">
+    <h3 style="margin-top:0">오늘의 변화 요약</h3>
+    <ul class="sum" id="summary"><li>데이터 대기</li></ul>
+   </div>
+  </div>
+ </section>
+
+ <!-- 이벤트 경보 -->
+ <section class="pane" id="p-alerts">
+  <h2>이벤트 경보</h2>
+  <p class="lead">토큰 가격이 갑자기 무너지는 순간(중국 고성능 모델 등장·대폭 가격 인하)이 과거 코스피 단기 급락과 가장 잘 맞았습니다. 아래 규칙으로 매일 자동 감지합니다.</p>
+  <div id="alertList"></div>
+  <h3>감지 규칙</h3>
+  <div class="tw"><table>
+   <thead><tr><th class="l">등급</th><th class="l">조건</th><th class="l">과거 대응 사례</th></tr></thead>
+   <tbody>
+    <tr><td class="l">적색</td><td class="l">OpenAI·Anthropic·Google 또는 사용량 20위 이내 모델의 혼합단가 50% 이상 인하</td><td class="l">GPT-5.6 할인 개시(2026.7.27) 다음 날 코스피 -10.84% (복합요인)</td></tr>
+    <tr><td class="l">적색</td><td class="l">출시 21일 이내 중국 모델이 사용량 10위 이내 진입</td><td class="l">딥시크 R1(2025.1), 키미 K3(2026.7)</td></tr>
+    <tr><td class="l">적색</td><td class="l">중국 모델 점유율 주간 +5%p 이상</td><td class="l">—</td></tr>
+    <tr><td class="l">적색</td><td class="l">중국 모델이 Artificial Analysis 지능지수 5위 이내 (선택 기능, AA 키 등록 시)</td><td class="l">키미 K3 지능지수 57점, 4위 수준 평가</td></tr>
+    <tr><td class="l">황색</td><td class="l">혼합단가 20~50% 인하 / 신규 중국 모델 50위 진입 / 중국 점유율 +2.5%p / 토큰 사용량 주간 감소 전환</td><td class="l">기업 비용 반발 보도(2026.6) 후 코스피 고점</td></tr>
+    <tr><td class="l">참고</td><td class="l">단가 20% 이상 인상, 토큰 사용량 주간 +30% 이상</td><td class="l">단가 상승기 = 코스피 상승기(2025.12~2026.6)</td></tr>
+   </tbody></table></div>
+  <h3>이벤트 이력과 시장 반응</h3>
+  <div class="tw"><table>
+   <thead><tr><th class="l">날짜</th><th class="l">이벤트</th><th>코스피 1일</th><th>5일</th><th>20일</th><th>SK하이닉스 1일</th><th>5일</th><th>닛케이 1일</th><th class="l">메모</th></tr></thead>
+   <tbody id="evBody"></tbody></table></div>
+  <div class="note">수익률 = 이벤트일 직전 거래일 종가 대비 이벤트 이후 첫 거래일(1일)·5거래일·20거래일 종가 (확정, Yahoo Finance 종가 기준 계산). 뉴스 메모는 보도 확정치이며 장중 수치와 다를 수 있음.</div>
+ </section>
+
+ <!-- 토큰 -->
+ <section class="pane" id="p-tokens">
+  <h2>토큰 사용량</h2>
+  <p class="lead">OpenRouter 일별 상위 50개 모델 + 기타 합계. 2025년 1월부터 누적. 사용량 '절대치'는 우상향이라 코스피 변별력이 약했고, 증가율 가속·감속이 더 의미 있습니다.</p>
+  <div class="box"><div class="chart"><canvas id="cTok"></canvas></div></div>
+  <div class="box" style="margin-top:16px"><h3 style="margin-top:0">주간 증가율</h3><div class="chart sm"><canvas id="cWk"></canvas></div></div>
+  <h3>모델별 사용량 순위 <span class="lbl" id="tmDate"></span></h3>
+  <div class="tw"><table>
+   <thead><tr><th>순위</th><th class="l">모델</th><th class="l">개발사</th><th>일 토큰</th><th>점유율</th><th>7일 변화</th><th>혼합단가($/100만)</th></tr></thead>
+   <tbody id="tmBody"></tbody></table></div>
+  <div class="note">점유율 = 상위 50개 합계 대비 (확정). 7일 변화 = 최근 7일 평균 ÷ 직전 7일 평균 (확정). 혼합단가 = (입력×3 + 출력×1) ÷ 4, Artificial Analysis 관례 (가정). 개발사마다 토크나이저가 달라 토큰 수 직접 비교에는 한계가 있습니다.</div>
+ </section>
+
+ <!-- 점유율 -->
+ <section class="pane" id="p-share">
+  <h2>점유율</h2>
+  <p class="lead">미국 vs 중국 모델의 토큰 점유율(상위 50개 기준). 2026년 4월 중국 점유율 급등기에 코스피도 급등해, 점유율 '수준'은 신호가 아니었습니다. 급변과 신모델 진입을 보세요.</p>
+  <div class="box"><div class="chart"><canvas id="cShare"></canvas></div></div>
+  <h3>개발사별 점유율 (최근 7일 vs 직전 7일)</h3>
+  <div class="tw"><table>
+   <thead><tr><th class="l">개발사</th><th>최근 7일</th><th>직전 7일</th><th>변화(%p)</th></tr></thead>
+   <tbody id="vBody"></tbody></table></div>
+  <div class="note">OpenAI가 OpenRouter 등 외부 점유율 추정에 쓰이는 플랫폼을 겨냥해 가격을 낮췄다는 분석이 있어, 이 점유율은 전체 시장과 다를 수 있습니다.</div>
+ </section>
+
+ <!-- 단가 -->
+ <section class="pane" id="p-price">
+  <h2>단가</h2>
+  <p class="lead">사용량 상위 모델의 토큰가중 평균 혼합단가와 일 지출 추정. 가격 이력은 첫 실행일부터 매일 쌓입니다.</p>
+  <div class="box"><div class="chart"><canvas id="cPrice"></canvas></div><div id="priceEmpty"></div></div>
+  <h3>가격 변동 (±20% 이상)</h3>
+  <div class="tw"><table>
+   <thead><tr><th class="l">모델</th><th class="l">개발사</th><th>이전</th><th>현재</th><th>변화</th><th>사용량 순위</th><th class="l">기간</th></tr></thead>
+   <tbody id="pmBody"></tbody></table></div>
+  <div id="aaWrap"></div>
+  <div class="note">지출 추정 = 일 토큰 × 혼합단가 (추정). 무료(:free) 모델과 가격 미확인 모델은 제외하며 포함 비율은 툴팁에 표시.</div>
+ </section>
+
+ <!-- 코스피 연동 -->
+ <section class="pane" id="p-corr">
+  <h2>코스피 연동 분석</h2>
+  <p class="lead">토큰 지표를 0~4주 앞당겨 코스피·SK하이닉스·닛케이 주간 수익률과의 상관계수를 매일 다시 계산합니다. 양수 = 같은 방향, 음수 = 반대 방향.</p>
+  <div class="tw"><table>
+   <thead><tr><th class="l">토큰 지표</th><th class="l">대상</th><th>동시</th><th>1주 선행</th><th>2주 선행</th><th>3주 선행</th><th>4주 선행</th><th>표본(주)</th></tr></thead>
+   <tbody id="cBody"></tbody></table></div>
+  <div class="note">판정 기준(경험적, 통계적 유의성 아님): |r| 0.2 미만 무의미 / 0.2~0.4 약함 / 0.4 이상 의미 있음 (추정). 표본이 2025년 이후로 짧아 해석에 주의.</div>
+  <div class="box" style="margin-top:18px"><h3 style="margin-top:0">중국 모델 점유율과 코스피</h3><div class="chart"><canvas id="cCnK"></canvas></div></div>
+ </section>
+
+ <!-- 종목 -->
+ <section class="pane" id="p-stocks">
+  <h2>한·일 AI 인프라 종목</h2>
+  <p class="lead">레이어별로 묶어 기간 시작일을 100으로 환산했습니다. 종목별 AI 매출 노출도는 레이어 분류 기준 (추정).</p>
+  <div class="chips" id="layerChips"></div>
+  <div class="chips" id="periodChips"></div>
+  <div class="box"><div class="chart"><canvas id="cStk"></canvas></div></div>
+  <h3>수익률</h3>
+  <div class="tw"><table>
+   <thead><tr><th class="l">종목</th><th class="l">국가</th><th class="l">레이어</th><th>종가</th><th>1일</th><th>1주</th><th>1개월</th><th>연초 대비</th><th class="l">기준일</th></tr></thead>
+   <tbody id="sBody"></tbody></table></div>
+  <div class="note">종가: Yahoo Finance 수정종가 (확정 데이터 소스, 투자 판단 전 HTS 재확인 권장).</div>
+ </section>
+
+ <!-- 원문 사이트 -->
+ <section class="pane" id="p-sites">
+  <h2>원문 사이트 바로가기</h2>
+  <p class="lead">'한국어로 보기'는 Google 번역을 거쳐 한국어로 엽니다. 차트가 많은 사이트는 번역 화면에서 그래프가 안 뜰 수 있어, 그때는 '원문'을 열고 크롬 주소창 오른쪽 번역 아이콘을 누르세요.</p>
+  <div class="sites" id="sites"></div>
+ </section>
+</main>
+
+<footer><div class="wrap" id="foot">Source: OpenRouter (openrouter.ai/rankings). 투자 참고용 데이터이며 수익을 보장하지 않습니다.</div></footer>
+
+<script>
+const C = {orange:'#F58220', navy:'#043B72', teal:'#0F7C8C', grey:'#9AA3AF', red:'#C62828'};
+Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+Chart.defaults.color = '#5B6676';
+Chart.defaults.borderColor = '#E4E7EC';
+const $ = id => document.getElementById(id);
+const charts = {};
+
+/* ---------- helpers ---------- */
+function fmtTok(n){ if(n==null) return '–'; if(n>=1e12) return (n/1e12).toFixed(2)+'조'; if(n>=1e8) return (n/1e8).toFixed(1)+'억'; return Math.round(n).toLocaleString('ko-KR'); }
+function pct(x,d=1){ if(x==null||isNaN(x)) return '–'; const s=(x>0?'+':'')+x.toFixed(d)+'%'; return `<span class="${x<0?'neg':'pos'}">${s}</span>`; }
+function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function ma(arr,n){ return arr.map((_,i)=>{ if(i<n-1) return null; let s=0; for(let k=i-n+1;k<=i;k++) s+=arr[k]; return s/n; }); }
+function mapSeries(dates, sDates, sVals){ const m=new Map(sDates.map((d,i)=>[d,sVals[i]])); let last=null; return dates.map(d=>{ if(m.has(d)) last=m.get(d); return last; }); }
+function tr(url){ // Google 번역 프록시 주소로 변환
+  const u=new URL(url); const host=u.hostname.replace(/-/g,'--').replace(/\./g,'-');
+  const q=u.search?u.search+'&':'?';
+  return `https://${host}.translate.goog${u.pathname}${q}_x_tr_sl=auto&_x_tr_tl=ko&_x_tr_hl=ko${u.hash}`;
+}
+function mk(id,cfg){ if(charts[id]) charts[id].destroy(); charts[id]=new Chart($(id),cfg); return charts[id]; }
+const baseOpts = (extra={}) => Object.assign({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{position:'bottom',labels:{boxWidth:14,usePointStyle:false}}},
+  elements:{point:{radius:0},line:{borderWidth:2,tension:.15}}, scales:{x:{ticks:{maxTicksLimit:8,autoSkip:true}}}}, extra);
+
+/* event line plugin */
+const eventLines = {id:'eventLines', afterDatasetsDraw(ch, a, o){
+  const ev=o.events||[]; const labels=ch.data.labels||[]; const xs=ch.scales.x; if(!xs||!labels.length) return;
+  const ctx=ch.ctx; ctx.save(); ctx.setLineDash([4,4]); ctx.strokeStyle='#C62828'; ctx.globalAlpha=.55; ctx.lineWidth=1;
+  ev.forEach(e=>{ const i=labels.findIndex(d=>d>=e.date); if(i<0) return; const x=xs.getPixelForValue(i);
+    ctx.beginPath(); ctx.moveTo(x,ch.chartArea.top); ctx.lineTo(x,ch.chartArea.bottom); ctx.stroke(); });
+  ctx.restore(); }};
+Chart.register(eventLines);
+Chart.register({id:'fillLegend',beforeUpdate(ch){ch.data.datasets.forEach(d=>{ if(ch.config.type==='line' && !d.backgroundColor) d.backgroundColor=d.borderColor; });}});
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected', x===b));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on', p.id==='p-'+b.dataset.p));
+  Object.values(charts).forEach(c=>c.resize());
+}));
+
+/* ---------- external sites ---------- */
+const SITES = [
+ {n:'OpenRouter 랭킹', u:'https://openrouter.ai/rankings', src:'openrouter.ai',
+  see:['상위 모델 주간 토큰 순위와 증감','개발사별 점유율(Market Share) 차트','작업 유형별(코딩·롤플레이 등) 토큰 비중'],
+  sig:'중국 모델이 상위권에 새로 진입하면 경보 유형 — 이 사이트의 자동 감지와 함께 확인'},
+ {n:'OpenRouter 앱 랭킹', u:'https://openrouter.ai/apps', src:'openrouter.ai',
+  see:['토큰을 가장 많이 쓰는 앱(코딩 에이전트 등)','앱별 주력 모델 교체 여부'],
+  sig:'대형 앱이 저가 중국 모델로 갈아타면 단가 하락 압력'},
+ {n:'OpenRouter 주간 데이터 레터', u:'https://openrouter.ai/data/newsletter', src:'openrouter.ai',
+  see:['캐시·에이전트 토큰 비중','모델 교체 주기, 버전 지연'],
+  sig:'에이전트·캐시 비중 상승 = 메모리 용량 수요 (추정)'},
+ {n:'OpenRouter 데이터 블로그', u:'https://openrouter.ai/blog/insights', src:'openrouter.ai',
+  see:['가격 인하 후 사용량 반응(제번스 역설)','중국 오픈웨이트 모델 점유율 분석'],
+  sig:'가격 인하 뒤 총지출이 늘었는지가 핵심 — 사용량만 늘면 판단 보류'},
+ {n:'OpenRouter State of AI', u:'https://openrouter.ai/state-of-ai', src:'openrouter.ai · a16z',
+  see:['연간 토큰 사용 구조','모델·개발사별 장기 추세'],
+  sig:'연 1회 큰 그림 점검용'},
+ {n:'Artificial Analysis 모델 비교', u:'https://artificialanalysis.ai/models', src:'artificialanalysis.ai',
+  see:['지능지수 vs 가격 산점도(가성비 경계선)','중국 모델의 상위권 진입 여부','출력 속도'],
+  sig:'중국 모델이 지능지수 5위 안 = 적색 경보 유형'},
+ {n:'Artificial Analysis 지능지수', u:'https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index', src:'artificialanalysis.ai',
+  see:['최상위 모델 점수 격차','신모델 출시 직후 순위 변동'],
+  sig:'미국-중국 점수 차 축소 속도'},
+ {n:'BenchLM 가격 추이', u:'https://benchlm.ai/llm-pricing-trends', src:'benchlm.ai',
+  see:['프런티어 가격지수 추세','성능 대비 단가 하락 속도'],
+  sig:'완만한 하락은 정상, 급락 구간이 경보 유형'},
+ {n:'Pricepertoken 가격 추세', u:'https://pricepertoken.com/trends', src:'pricepertoken.com',
+  see:['개발사별 토큰 단가 변화','입력·출력 단가 분리 추이'],
+  sig:'단가 인상 구간 = 과거 코스피 상승 구간과 동행'},
+ {n:'Tokenmaxxing 랭킹 해설', u:'https://tokenmaxxing.com/openrouter-rankings', src:'tokenmaxxing.com',
+  see:['OpenRouter 랭킹을 쉬운 설명으로 재구성'],
+  sig:'고객 설명용 문구 참고'},
+ {n:'TrendForce DRAMeXchange', u:'https://www.dramexchange.com/', src:'dramexchange.com',
+  see:['DRAM·NAND 현물가 일간 변화','고정거래가 월간 발표'],
+  sig:'코스피의 실질 연결고리 — 메모리 가격 증가율 둔화가 2026년 10월 하락과 동행'},
+ {n:'관세청 수출입무역통계', u:'https://tradedata.go.kr/', src:'tradedata.go.kr · 한국어 사이트', ko:true,
+  see:['반도체 수출 10일 단위 잠정치','HBM 포함 메모리 수출 증감'],
+  sig:'토큰 수요가 실제 수출로 이어지는지 확인'},
+];
+$('sites').innerHTML = SITES.map(s=>`<article class="site">
+  <h4>${esc(s.n)}</h4><div class="src">${esc(s.src)}</div>
+  <ul>${s.see.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+  <div class="sig">${esc(s.sig)}</div>
+  <div class="acts">${s.ko?`<a class="btn" href="${s.u}" target="_blank" rel="noopener">열기</a>`
+   :`<a class="btn" href="${tr(s.u)}" target="_blank" rel="noopener">한국어로 보기</a><a class="btn ghost" href="${s.u}" target="_blank" rel="noopener">원문</a>`}</div>
+</article>`).join('');
+
+/* ---------- render ---------- */
+function render(D){
+  const M=D.meta||{};
+  $('asof').innerHTML = `OpenRouter 데이터 <strong>${M.last_rank_date||'–'}</strong> (UTC 기준일)<br>갱신 ${M.updated_kst||'–'} KST`;
+  $('foot').textContent = `Source: OpenRouter (openrouter.ai/rankings), as of ${M.rank_as_of||'–'}. 주가: Yahoo Finance. 투자 참고용이며 수익을 보장하지 않습니다.`
+    + (M.errors&&M.errors.length? `  |  수집 오류: ${M.errors.join(' / ')}`:'');
+
+  // signal
+  const A=D.alert||{level:'green',items:[]}; const sig=$('signal');
+  sig.className='signal '+(A.level||'green');
+  $('sigWord').textContent = {red:'적색 경보', yellow:'주의', green:'정상'}[A.level]||'정상';
+  const top=(A.items||[]).filter(a=>a.level!=='info').slice(0,3);
+  $('sigLines').innerHTML = top.length? top.map(a=>`<div>${esc(a.title)} <span class="lbl">(${a.label})</span></div>`).join('')
+    : '<div>오늘 감지된 단가 급락·중국 신모델·점유율 급변 이벤트 없음</div>';
+
+  // alerts
+  $('alertList').innerHTML = (A.items&&A.items.length)? A.items.map(a=>`<div class="alert ${a.level}"><div class="t">[${esc(a.type)}] ${esc(a.title)} <span class="lbl">(${a.label})</span></div><div class="d">${esc(a.detail)}</div></div>`).join('')
+    : '<div class="empty">오늘 감지된 경보가 없습니다.</div>';
+  $('evBody').innerHTML = (D.events||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<tr>
+    <td class="l">${e.date}</td><td class="l">${esc(e.title)}<span class="lbl">${esc(e.source||'')}</span></td>
+    <td>${pct(e.kospi_1d,2)}</td><td>${pct(e.kospi_5d,2)}</td><td>${pct(e.kospi_20d,2)}</td>
+    <td>${pct(e.hynix_1d,2)}</td><td>${pct(e.hynix_5d,2)}</td><td>${pct(e.nikkei_1d,2)}</td><td class="l">${esc(e.note||'')}</td></tr>`).join('');
+
+  const T=D.tokens||{dates:[],total:[]}; const has=T.dates&&T.dates.length;
+  const ks=(D.stocks||[]).find(s=>s.t==='^KS11');
+  const evs=(D.events||[]).map(e=>({date:e.date}));
+
+  // KPIs
+  const pi=D.price_index||{dates:[]};
+  if(has){
+    const n=T.total.length, w=T.total.slice(-7).reduce((a,b)=>a+b,0), wp=T.total.slice(-14,-7).reduce((a,b)=>a+b,0);
+    const cn=T.cn_share[n-1], cnp=T.cn_share[Math.max(0,n-8)];
+    const kst=(D.stock_stats||[]).find(s=>s.t==='^KS11');
+    $('kpis').innerHTML = `
+     <div class="kpi"><div class="k">일 토큰 (${T.dates[n-1]})</div><div class="v">${fmtTok(T.total[n-1])}</div><div class="s">전일 ${pct((T.total[n-1]/T.total[n-2]-1)*100)} <span class="lbl">확정</span></div></div>
+     <div class="kpi"><div class="k">7일 합계 전주 대비</div><div class="v">${wp?((w/wp-1)*100>0?'+':'')+((w/wp-1)*100).toFixed(1)+'%':'–'}</div><div class="s">${fmtTok(w)} 토큰 <span class="lbl">확정</span></div></div>
+     <div class="kpi"><div class="k">중국 모델 점유율</div><div class="v">${cn!=null?cn.toFixed(1)+'%':'–'}</div><div class="s">1주 전 대비 ${cn!=null&&cnp!=null?((cn-cnp>0?'+':'')+(cn-cnp).toFixed(1)+'%p'):'–'} <span class="lbl">확정</span></div></div>
+     <div class="kpi"><div class="k">코스피</div><div class="v">${kst?kst.last.toLocaleString('ko-KR'):'–'}</div><div class="s">${kst?pct(kst.d1,2)+' · 1주 '+pct(kst.w1,2):'–'} <span class="lbl">확정</span></div></div>`;
+  } else {
+    $('kpis').innerHTML = '<div class="empty" style="grid-column:1/-1">토큰 데이터가 아직 없습니다. 저장소 Settings → Secrets에 OPENROUTER_API_KEY를 등록한 뒤 Actions를 실행하세요.</div>';
+  }
+  $('summary').innerHTML = (D.summary&&D.summary.length? D.summary:['데이터 대기']).map(s=>`<li>${esc(s)}</li>`).join('');
+
+  if(has){
+    const m7=ma(T.total,7);
+    const kv=ks?mapSeries(T.dates,ks.dates,ks.close):[];
+    mk('cToday',{type:'line',data:{labels:T.dates,datasets:[
+      {label:'토큰 7일 평균',data:m7,borderColor:C.orange,yAxisID:'y'},
+      {label:'코스피',data:kv,borderColor:C.navy,yAxisID:'y1',spanGaps:true}]},
+      options:baseOpts({plugins:{legend:{position:'bottom'},eventLines:{events:evs},tooltip:{callbacks:{label:c=>c.dataset.yAxisID==='y'?` 토큰 ${fmtTok(c.raw)}`:` 코스피 ${c.raw?.toLocaleString('ko-KR')}`}}},
+       scales:{x:{ticks:{maxTicksLimit:8}},y:{ticks:{callback:v=>fmtTok(v)}},y1:{position:'right',grid:{display:false}}}})});
+    mk('cTok',{type:'line',data:{labels:T.dates,datasets:[
+      {label:'일 토큰',data:T.total,borderColor:'#F9C08E',borderWidth:1},
+      {label:'7일 평균',data:m7,borderColor:C.orange}]},
+      options:baseOpts({plugins:{legend:{position:'bottom'},eventLines:{events:evs},tooltip:{callbacks:{label:c=>' '+c.dataset.label+' '+fmtTok(c.raw)}}},scales:{x:{ticks:{maxTicksLimit:8}},y:{ticks:{callback:v=>fmtTok(v)}}}})});
+    // weekly
+    const wl=[],wv=[]; for(let i=T.total.length%7;i+7<=T.total.length;i+=7){ wl.push(T.dates[i+6]); wv.push(T.total.slice(i,i+7).reduce((a,b)=>a+b,0)); }
+    const wg=wv.map((v,i)=>i?((v/wv[i-1]-1)*100):null);
+    mk('cWk',{type:'bar',data:{labels:wl,datasets:[{label:'주간 증가율(%)',data:wg,backgroundColor:wg.map(v=>v<0?C.grey:C.orange)}]},
+      options:baseOpts({plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:10}},y:{ticks:{callback:v=>v+'%'}}}})});
+    mk('cShare',{type:'line',data:{labels:T.dates,datasets:[
+      {label:'중국 모델 점유율(%)',data:ma(T.cn_share.map(v=>v??0),7),borderColor:C.red},
+      {label:'미국 모델 점유율(%)',data:ma(T.us_share.map(v=>v??0),7),borderColor:C.navy}]},
+      options:baseOpts({plugins:{legend:{position:'bottom'},eventLines:{events:evs}},scales:{x:{ticks:{maxTicksLimit:8}},y:{ticks:{callback:v=>v+'%'}}}})});
+    if(ks) mk('cCnK',{type:'line',data:{labels:T.dates,datasets:[
+      {label:'중국 점유율 7일 평균(%)',data:ma(T.cn_share.map(v=>v??0),7),borderColor:C.red,yAxisID:'y'},
+      {label:'코스피',data:mapSeries(T.dates,ks.dates,ks.close),borderColor:C.navy,yAxisID:'y1',spanGaps:true}]},
+      options:baseOpts({plugins:{legend:{position:'bottom'},eventLines:{events:evs}},scales:{x:{ticks:{maxTicksLimit:8}},y:{ticks:{callback:v=>v+'%'}},y1:{position:'right',grid:{display:false}}}})});
+  }
+
+  // top models
+  $('tmDate').textContent = M.last_rank_date? `${M.last_rank_date} 기준`:'';
+  $('tmBody').innerHTML = (D.top_models||[]).map(m=>`<tr><td>${m.rank}</td><td class="l">${esc(m.name)}<span class="lbl">${esc(m.slug)}</span></td>
+    <td class="l">${esc(m.vendor)}<span class="tag ${m.region}">${{CN:'중국',US:'미국',ETC:'기타'}[m.region]}</span></td>
+    <td>${fmtTok(m.tokens)}</td><td>${m.share!=null?(m.share*100).toFixed(1)+'%':'–'}</td><td>${m.chg7!=null?pct(m.chg7*100):'–'}</td>
+    <td>${m.blended!=null?'$'+m.blended.toFixed(3):'–'}</td></tr>`).join('') || '<tr><td colspan="7" class="l">데이터 대기</td></tr>';
+  $('vBody').innerHTML = (D.vendors||[]).map(v=>`<tr><td class="l">${esc(v.name)}<span class="tag ${v.region}">${{CN:'중국',US:'미국',ETC:'기타'}[v.region]}</span></td>
+    <td>${(v.share*100).toFixed(1)}%</td><td>${v.prev!=null?(v.prev*100).toFixed(1)+'%':'–'}</td><td>${v.chg!=null?(v.chg>0?'+':'')+v.chg.toFixed(1):'–'}</td></tr>`).join('') || '<tr><td colspan="4" class="l">데이터 대기</td></tr>';
+
+  // price
+  if(pi.dates&&pi.dates.length>=2){
+    $('priceEmpty').innerHTML='';
+    mk('cPrice',{type:'line',data:{labels:pi.dates,datasets:[
+      {label:'토큰가중 평균 혼합단가($/100만)',data:pi.wavg,borderColor:C.teal,yAxisID:'y'},
+      {label:'일 지출 추정($)',data:pi.spend,borderColor:C.grey,yAxisID:'y1',borderDash:[5,4]}]},
+      options:baseOpts({scales:{y:{ticks:{callback:v=>'$'+v}},y1:{position:'right',grid:{display:false},ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M'}}}})});
+  } else {
+    $('priceEmpty').innerHTML=`<div class="empty">가격 이력 축적 중 (현재 ${pi.dates?pi.dates.length:0}일). 2일째부터 그래프가 그려지고, 가격 변동 감지는 2일째부터 작동합니다.</div>`;
+  }
+  $('pmBody').innerHTML = (D.price_moves||[]).map(x=>`<tr><td class="l">${esc(x.slug)}</td><td class="l">${esc(x.vendor)}<span class="tag ${x.region}">${{CN:'중국',US:'미국',ETC:'기타'}[x.region]}</span></td>
+    <td>$${x.old}</td><td>$${x.new}</td><td>${pct(x.chg)}</td><td>${x.rank??'–'}</td><td class="l">${x.from} → ${x.to}</td></tr>`).join('') || '<tr><td colspan="7" class="l">±20% 이상 변동 없음</td></tr>';
+  if(D.aa&&D.aa.length){
+    $('aaWrap').innerHTML = `<h3>Artificial Analysis 지능지수 상위</h3><div class="tw"><table><thead><tr><th>순위</th><th class="l">모델</th><th class="l">개발사</th><th>지능지수</th><th>혼합단가</th></tr></thead><tbody>`+
+      D.aa.map((m,i)=>`<tr><td>${i+1}</td><td class="l">${esc(m.name)}</td><td class="l">${esc(m.creator)}</td><td>${m.index}</td><td>${m.price!=null?'$'+m.price:'–'}</td></tr>`).join('')+`</tbody></table></div>`;
+  }
+
+  // corr
+  const verdict=r=>{ if(r==null) return '–'; const a=Math.abs(r); const cls=a>=.4?(r<0?'neg':'pos'):''; return `<span class="${cls}" style="${a>=.4?'font-weight:700':''}">${r.toFixed(2)}</span>`; };
+  $('cBody').innerHTML = (D.corr||[]).map(r=>`<tr><td class="l">${esc(r.feature)}</td><td class="l">${esc(r.target)}</td>${r.lags.map(verdict).map(x=>`<td>${x}</td>`).join('')}<td>${r.n}</td></tr>`).join('')
+    || '<tr><td colspan="8" class="l">토큰 데이터 120일 이상 확보 후 계산됩니다.</td></tr>';
+
+  // stocks
+  renderStocks(D);
+}
+
+let STK=null, curLayer='메모리', curPeriod=252;
+function renderStocks(D){
+  STK=D.stocks||[];
+  const layers=['지수',...new Set(STK.map(s=>s.layer).filter(l=>l!=='지수'))];
+  if(!layers.includes(curLayer)) curLayer=layers[1]||layers[0];
+  $('layerChips').innerHTML = layers.map(l=>`<button class="chip" aria-pressed="${l===curLayer}" data-l="${l}">${l}</button>`).join('');
+  $('periodChips').innerHTML = [[63,'3개월'],[126,'6개월'],[252,'1년'],[9999,'전체']].map(([n,t])=>`<button class="chip" aria-pressed="${n===curPeriod}" data-n="${n}">${t}</button>`).join('');
+  $('layerChips').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{curLayer=b.dataset.l; renderStocks(D);});
+  $('periodChips').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{curPeriod=+b.dataset.n; renderStocks(D);});
+  const sel=STK.filter(s=>s.layer===curLayer);
+  if(sel.length){
+    const ref=sel.reduce((a,b)=>a.dates.length>=b.dates.length?a:b);
+    const labels=ref.dates.slice(-curPeriod);
+    const pal=[C.navy,C.orange,C.teal,'#6B4FA0','#8A94A3'];
+    const ds=sel.map((s,i)=>{ const v=mapSeries(labels,s.dates,s.close); const b=v.find(x=>x!=null);
+      return {label:s.name,data:v.map(x=>x==null?null:x/b*100),borderColor:pal[i%pal.length],spanGaps:true}; });
+    mk('cStk',{type:'line',data:{labels,datasets:ds},options:baseOpts({plugins:{legend:{position:'bottom'},eventLines:{events:(D.events||[]).map(e=>({date:e.date}))},tooltip:{callbacks:{label:c=>` ${c.dataset.label} ${c.raw?.toFixed(1)}`}}}})});
+  }
+  $('sBody').innerHTML = (D.stock_stats||[]).map(s=>`<tr><td class="l">${esc(s.name)}<span class="lbl">${esc(s.t)}</span></td><td class="l">${s.c==='KR'?'한국':'일본'}</td><td class="l">${esc(s.layer)}</td>
+    <td>${s.last.toLocaleString('ko-KR')}</td><td>${pct(s.d1,2)}</td><td>${pct(s.w1,2)}</td><td>${pct(s.m1,2)}</td><td>${pct(s.ytd,2)}</td><td class="l">${s.date}</td></tr>`).join('')
+    || '<tr><td colspan="9" class="l">데이터 대기</td></tr>';
+}
+
+fetch('data/dashboard.json?ts='+Date.now()).then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+ .then(render)
+ .catch(()=>{ $('asof').textContent='데이터 파일 없음 — Actions 첫 실행 필요'; });
+</script>
+</body>
+</html>
