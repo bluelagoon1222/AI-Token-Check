@@ -250,6 +250,7 @@ Chart.defaults.color = '#5B6676';
 Chart.defaults.borderColor = '#E4E7EC';
 const $ = id => document.getElementById(id);
 const charts = {};
+if (window.top !== window.self) { const h=document.querySelector('.home'); if(h) h.style.display='none'; } // 허브 안에서 열리면 홈 버튼 숨김
 
 /* ---------- helpers ---------- */
 function fmtTok(n){ if(n==null) return '–'; if(n>=1e12) return (n/1e12).toFixed(2)+'조'; if(n>=1e8) return (n/1e8).toFixed(1)+'억'; return Math.round(n).toLocaleString('ko-KR'); }
