@@ -35,7 +35,7 @@ VENDOR_NAME = {
     "openai": "OpenAI", "anthropic": "Anthropic", "google": "Google", "meta-llama": "Meta", "x-ai": "xAI",
     "deepseek": "DeepSeek", "qwen": "Qwen(알리바바)", "moonshotai": "Moonshot(키미)", "z-ai": "Z.ai(GLM)",
     "minimax": "MiniMax", "mistralai": "Mistral(프랑스)", "xiaomi": "샤오미", "bytedance-seed": "바이트댄스",
-    "bytedance": "바이트댄스", "tencent": "텐센트", "baidu": "바이두", "stepfun-ai": "StepFun", "meituan": "메이퉁",
+    "bytedance": "바이트댄스", "tencent": "텐센트", "baidu": "바이두", "stepfun-ai": "StepFun", "stepfun": "StepFun", "meituan": "메이퉁",
     "amazon": "Amazon", "microsoft": "Microsoft", "nvidia": "NVIDIA", "cohere": "Cohere(캐나다)",
     "openrouter": "OpenRouter(라우터)", "other": "기타(상위50 밖)",
 }
@@ -570,7 +570,8 @@ def main():
         summary.append(f"토큰가중 평균 혼합단가 ${pidx[k]['wavg']:.3f}/100만토큰, 일 지출 추정 ${pidx[k]['spend']:,.0f} (추정: 입력3:출력1 가정)")
     for st in stats:
         if st["t"] in ("^KS11", "000660.KS"):
-            summary.append(f"{st['name']} {st['date']} 종가 {st['last']:,} ({st['d1']:+.2f}%, 1주 {st['w1']:+.2f}%) (확정)")
+            lastfmt = f"{st['last']:,.2f}" if st["t"].startswith("^") else f"{st['last']:,.0f}"
+            summary.append(f"{st['name']} {st['date']} 종가 {lastfmt} ({st['d1']:+.2f}%, 1주 {st['w1']:+.2f}%) (확정)")
     if price_moves:
         summary.append(f"가격 변동(±20% 이상) {len(price_moves)}건 감지 (확정)")
 
