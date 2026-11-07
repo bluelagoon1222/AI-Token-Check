@@ -41,6 +41,20 @@ VENDOR_NAME = {
 }
 
 
+COUNTRY_OF = {"mistralai": "FR", "cohere": "CA", "ai21": "IL", "upstage": "KR", "lgai": "KR", "lgai-exaone": "KR",
+              "naver": "KR", "kakao": "KR", "sakana": "JP", "pfnet": "JP", "sarvam": "IN", "sarvamai": "IN",
+              "tii": "AE", "tiiuae": "AE", "aion-labs": "IL"}
+COUNTRY_NAME = {"US": "미국", "CN": "중국", "FR": "프랑스", "KR": "한국", "JP": "일본", "CA": "캐나다", "IL": "이스라엘",
+                "IN": "인도", "AE": "UAE", "ETC": "기타·미분류"}
+
+
+def country(v):
+    r = region(v)
+    if r in ("US", "CN"):
+        return r
+    return COUNTRY_OF.get(v, "ETC")
+
+
 def vendor(slug):
     return slug.split("/")[0].lower() if "/" in slug else slug.lower()
 
@@ -282,7 +296,7 @@ def correlation(agg, stocks):
     }
     targets = {}
     for s in stocks:
-        if s["t"] in ("^KS11", "000660.KS", "^N225"):
+        if s["t"] in ("^KS11", "000660.KS", "005930.KS", "285A.T", "^N225"):
             ser = pd.Series(s["close"], index=pd.to_datetime(s["dates"]))
             targets[s["name"]] = ser.resample("W-FRI").last().pct_change()
     res = []
@@ -300,6 +314,129 @@ def correlation(agg, stocks):
             row["n"] = int(len(pd.concat([f, t], axis=1).dropna()))
             res.append(row)
     return res
+
+
+def weekly_mix(days):
+    """Weekly tokens by model-origin country and by top vendors."""
+    import pandas as pd
+    rows = []
+    for d, m in days.items():
+        for sl, v in m.items():
+            if sl == "other":
+                continue
+            vv = vendor(sl)
+            rows.append((d, country(vv), vv, v))
+    if not rows:
+        return None
+    df = pd.DataFrame(rows, columns=["d", "c", "v", "t"])
+    df["d"] = pd.to_datetime(df["d"])
+    full_weeks = df.groupby(pd.Grouper(key="d", freq="W-FRI"))["d"].nunique()
+    keep = full_weeks[full_weeks >= 7].index
+    byc = df.groupby([pd.Grouper(key="d", freq="W-FRI"), "c"])["t"].sum().unstack(fill_value=0)
+    byc = byc.loc[byc.index.isin(keep)]
+    topv = df.groupby("v")["t"].sum().sort_values(ascending=False).index[:9].tolist()
+    df["vg"] = df["v"].where(df["v"].isin(topv), "_rest")
+    byv = df.groupby([pd.Grouper(key="d", freq="W-FRI"), "vg"])["t"].sum().unstack(fill_value=0)
+    byv = byv.loc[byv.index.isin(keep)]
+    order_c = [c for c in ["US", "CN", "FR", "KR", "JP", "CA", "IL", "IN", "AE", "ETC"] if c in byc.columns]
+    return {
+        "dates": [d.strftime("%Y-%m-%d") for d in byc.index],
+        "country": {COUNTRY_NAME[c]: [int(x) for x in byc[c].values] for c in order_c},
+        "vendor": {(VENDOR_NAME.get(v, v) if v != "_rest" else "기타 개발사"): [int(x) for x in byv[v].values]
+                   for v in topv + (["_rest"] if "_rest" in byv.columns else [])},
+    }
+
+
+def catalog_prices(models):
+    """Price distribution of the whole OpenRouter catalog by model-origin country (paid models only)."""
+    seen, rows = set(), []
+    for rec in models.values():
+        mid = rec.get("id") or ""
+        if mid in seen or mid.endswith(":free") or "/" not in mid:
+            continue
+        seen.add(mid)
+        b = blended(rec)
+        if b <= 0:
+            continue
+        rows.append((country(vendor(mid)), b, rec["in"], rec["out"], mid))
+    out = {}
+    for c in ["US", "CN", "FR", "ETC"]:
+        xs = sorted(r[1] for r in rows if (r[0] == c or (c == "ETC" and r[0] not in ("US", "CN", "FR"))))
+        if not xs:
+            continue
+        q = lambda f: round(xs[min(len(xs) - 1, int(f * (len(xs) - 1)))], 4)
+        out[COUNTRY_NAME[c] if c != "ETC" else "기타"] = {"n": len(xs), "min": q(0), "p25": q(.25), "median": q(.5),
+                                                         "p75": q(.75), "max": q(1)}
+    return out
+
+
+def stock_corr(agg, stocks):
+    """Every stock x token metric, lead 0~4 weeks: Pearson r, best lag, t-stat significance, beta."""
+    import pandas as pd
+    if len(agg) < 120:
+        return None, None
+    df = pd.DataFrame(agg).set_index("d")
+    df.index = pd.to_datetime(df.index)
+    wk_days = df["total"].resample("W-FRI").count()
+    w_tok = df["total"].resample("W-FRI").sum()
+    feats = pd.DataFrame({
+        "tok": w_tok.pct_change() * 100,
+        "cn": df["cn_share"].resample("W-FRI").mean().diff() * 100,
+        "us": df["us_share"].resample("W-FRI").mean().diff() * 100,
+    })
+    feats = feats[wk_days >= 7]
+    names = {"tok": "토큰 사용량 증가율", "cn": "중국 점유율 변화", "us": "미국 점유율 변화"}
+    rets = {}
+    res = []
+    for s in stocks:
+        r = pd.Series(s["close"], index=pd.to_datetime(s["dates"])).resample("W-FRI").last().pct_change() * 100
+        rets[s["t"]] = r
+        row = {"t": s["t"], "name": s["name"], "layer": s["layer"], "c": s["c"], "f": {}}
+        for k in feats.columns:
+            lags = []
+            for lag in range(5):
+                x = pd.concat([feats[k].shift(lag), r], axis=1).replace([float("inf"), float("-inf")], float("nan")).dropna()
+                if len(x) < 20:
+                    lags.append(None)
+                    continue
+                rr = float(x.iloc[:, 0].corr(x.iloc[:, 1]))
+                n = len(x)
+                t = rr * math.sqrt((n - 2) / max(1e-9, 1 - rr * rr))
+                beta = float(x.iloc[:, 1].cov(x.iloc[:, 0]) / x.iloc[:, 0].var()) if x.iloc[:, 0].var() else None
+                lags.append({"r": round(rr, 3), "n": n, "t": round(t, 2), "sig": abs(t) >= 2.0,
+                             "beta": round(beta, 3) if beta is not None else None})
+            valid = [(i, v) for i, v in enumerate(lags) if v]
+            best = max(valid, key=lambda iv: abs(iv[1]["r"])) if valid else None
+            row["f"][k] = {"lags": lags, "best_lag": best[0] if best else None}
+        res.append(row)
+    idx = feats.index
+    weekly = {"dates": [d.strftime("%Y-%m-%d") for d in idx], "names": names,
+              "feat": {k: [None if pd.isna(v) else round(float(v), 4) for v in feats[k].values] for k in feats.columns},
+              "rets": {t: [None if pd.isna(v) else round(float(v), 3) for v in r.reindex(idx).values] for t, r in rets.items()}}
+    return res, weekly
+
+
+def rolling_corr(agg, stocks, window=26):
+    """26-week rolling correlation: China share weekly change vs memory stock weekly return (same week)."""
+    import pandas as pd
+    if len(agg) < 200:
+        return None
+    df = pd.DataFrame(agg).set_index("d")
+    df.index = pd.to_datetime(df.index)
+    cn = (df["cn_share"].resample("W-FRI").mean().diff() * 100).iloc[:-1]
+    out = {"dates": [], "series": {}}
+    for s in stocks:
+        if s["t"] not in ("000660.KS", "005930.KS", "^KS11"):
+            continue
+        r = pd.Series(s["close"], index=pd.to_datetime(s["dates"])).resample("W-FRI").last().pct_change()
+        x = pd.concat([cn, r], axis=1).dropna()
+        rc = x.iloc[:, 0].rolling(window).corr(x.iloc[:, 1]).dropna()
+        out["series"][s["name"]] = {d.strftime("%Y-%m-%d"): round(float(v), 3) for d, v in rc.items()}
+    ds = sorted({d for v in out["series"].values() for d in v})
+    out["dates"] = ds
+    out["series"] = {k: [v.get(d) for d in ds] for k, v in out["series"].items()}
+    out["window"] = window
+    return out
 
 
 def event_study(events, stocks):
@@ -391,7 +528,7 @@ def main():
             rec = price_for(s, models) if models else None
             top_models.append({
                 "rank": rank, "slug": s, "name": (rec or {}).get("name") or s, "vendor": VENDOR_NAME.get(vv, vv),
-                "region": region(vv), "tokens": v, "share": v / named_total if named_total else None,
+                "region": region(vv), "country": country(vv), "tokens": v, "share": v / named_total if named_total else None,
                 "chg7": (a7 / p7 - 1) if (a7 and p7) else None,
                 "in": rec["in"] if rec else None, "out": rec["out"] if rec else None,
                 "blended": round(blended(rec), 4) if rec else None,
@@ -426,9 +563,17 @@ def main():
                 num += m["tokens"] * m["blended"]
                 den += m["tokens"]
                 cover += m["tokens"]
+        reg = {}
+        for m in top_models:
+            if m["blended"] and m["blended"] > 0:
+                a = reg.setdefault(m["region"], [0.0, 0.0])
+                a[0] += m["tokens"] * m["blended"]
+                a[1] += m["tokens"]
         if den > 0 and models:
             pidx[today] = {"wavg": round(num / den, 4), "spend": round(num / 1e6, 0), "tok_date": last_day,
-                           "coverage": round(cover / named_total, 3) if named_total else None}
+                           "coverage": round(cover / named_total, 3) if named_total else None,
+                           "us": round(reg["US"][0] / reg["US"][1], 4) if reg.get("US") and reg["US"][1] else None,
+                           "cn": round(reg["CN"][0] / reg["CN"][1], 4) if reg.get("CN") and reg["CN"][1] else None}
             save("price_index.json", pidx)
 
         # price moves vs previous snapshot
@@ -544,6 +689,28 @@ def main():
     except Exception as e:
         err("correlation", e)
 
+    corr_roll = None
+    try:
+        corr_roll = rolling_corr(agg, stocks)
+    except Exception as e:
+        err("rolling_corr", e)
+
+    mix = None
+    try:
+        mix = weekly_mix(days)
+    except Exception as e:
+        err("weekly_mix", e)
+    cat = None
+    try:
+        cat = catalog_prices(models) if models else None
+    except Exception as e:
+        err("catalog_prices", e)
+    scorr, weekly = None, None
+    try:
+        scorr, weekly = stock_corr(agg, stocks)
+    except Exception as e:
+        err("stock_corr", e)
+
     stats = []
     for s in stocks:
         try:
@@ -592,12 +759,18 @@ def main():
         "top_models": top_models[:30],
         "new_models": new_models,
         "price_index": {"dates": sorted(pidx), "wavg": [pidx[k]["wavg"] for k in sorted(pidx)],
+                        "us": [pidx[k].get("us") for k in sorted(pidx)], "cn": [pidx[k].get("cn") for k in sorted(pidx)],
                         "spend": [pidx[k]["spend"] for k in sorted(pidx)]},
         "price_moves": price_moves,
         "aa": aa,
         "stocks": stocks,
         "stock_stats": stats,
         "corr": corr,
+        "corr_roll": corr_roll,
+        "mix": mix,
+        "catalog_prices": cat,
+        "stock_corr": scorr,
+        "weekly": weekly,
         "events": events,
     }
     save("dashboard.json", dash)
